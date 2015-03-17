@@ -105,6 +105,9 @@ public class MatchLayersByMaxPMCC {
         @Parameter( names = "--maxLocalTrust", description = "maxLocalTrust", required = false )
         public int maxLocalTrust = 3;
         
+        @Parameter( names = "--cropNSigma", description = "cropNSigma", required = false )
+        public int cropNSigma = 6;
+        
         //@Parameter( names = "--maxNumNeighbors", description = "maxNumNeighbors", required = false )
         //public float maxNumNeighbors = 3f;
         		
@@ -296,6 +299,7 @@ public class MatchLayersByMaxPMCC {
 			{
 				try
 				{
+					System.out.println( "Block matching..." );
 					BlockMatching.matchByMaximalPMCC(
 							ip1,
 							ip2,
@@ -313,6 +317,7 @@ public class MatchLayersByMaxPMCC {
 							v1,
 							pm12,
 							new ErrorStatistic( 1 ) );
+					System.out.println( "Block matching complete." );
 				}
 				catch ( final InterruptedException e )
 				{
@@ -346,7 +351,7 @@ public class MatchLayersByMaxPMCC {
 					System.out.println( layer1 + " > " + layer2 + ": found " + pm12.size() + " correspondence candidates." );
 										
 					// This version performs the same operation, but restricts the search window to radius 2-sigma, effectively weighting all matches outside this area to zero.
-					croppedLocalSmoothnessFilter( localSmoothnessFilterModel, pm12, pm12, localRegionSigma, maxLocalEpsilon, param.maxLocalTrust, 3 );
+					croppedLocalSmoothnessFilter( localSmoothnessFilterModel, pm12, pm12, localRegionSigma, maxLocalEpsilon, param.maxLocalTrust, param.cropNSigma );
 					//localSmoothnessFilterTest( localSmoothnessFilterModel, pm12, pm12, localRegionSigma, maxLocalEpsilon, param.maxLocalTrust );
 					
 					System.out.println( layer1 + " > " + layer2 + ": " + pm12.size() + " candidates passed (crop) local smoothness filter." );
@@ -402,6 +407,7 @@ public class MatchLayersByMaxPMCC {
 			{
 				try
 				{
+					System.out.println( "Block matching..." );
 					BlockMatching.matchByMaximalPMCC(
 							ip2,
 							ip1,
@@ -419,6 +425,7 @@ public class MatchLayersByMaxPMCC {
 							v2,
 							pm21,
 							new ErrorStatistic( 1 ) );
+					System.out.println( "Block matching complete." );
 				}
 				catch ( final InterruptedException e )
 				{
@@ -452,7 +459,7 @@ public class MatchLayersByMaxPMCC {
 					System.out.println( layer1 + " < " + layer2 + ": found " + pm21.size() + " correspondence candidates." );
 										
 					// This version performs the same operation, but restricts the search window to radius 2-sigma, effectively weighting all matches outside this area to zero.
-					croppedLocalSmoothnessFilter( localSmoothnessFilterModel, pm21, pm21, localRegionSigma, maxLocalEpsilon, param.maxLocalTrust, 3 );
+					croppedLocalSmoothnessFilter( localSmoothnessFilterModel, pm21, pm21, localRegionSigma, maxLocalEpsilon, param.maxLocalTrust, param.cropNSigma );
 					//localSmoothnessFilterTest( localSmoothnessFilterModel, pm21, pm21, localRegionSigma, maxLocalEpsilon, param.maxLocalTrust );
 					
 					System.out.println( layer1 + " < " + layer2 + ": " + pm21.size() + " candidates passed (crop) local smoothness filter." );
@@ -569,10 +576,14 @@ public class MatchLayersByMaxPMCC {
 		calculateBoundingBox( inliers, pmin, pmax );
 		
 		final float gridD = (float)sigma * cropNSigma / 2;
-		final int gridW = (int)Math.ceil((pmax[0] - pmin[0]) / gridD);
-		final int gridH = (int)Math.ceil((pmax[1] - pmin[1]) / gridD);
+		final int gridW = Math.max(1, (int)Math.round((pmax[0] - pmin[0]) / gridD));
+		final int gridH = Math.max(1, (int)Math.round((pmax[1] - pmin[1]) / gridD));
 		
-		System.out.println( "grid " + gridW + "x" + gridH);
+		/* evenly distribute the grid to make sure the last row / col is not too small */
+		final float gridDW = (pmax[0] - pmin[0]) / gridW;
+		final float gridDH = (pmax[1] - pmin[1]) / gridH;
+		
+		System.out.println( "grid " + gridW + "x" + gridH + ", " + gridDW + "x" + gridDH);
 		
 		/* split into n-sigma / 2 wide bins to restrict search space */
 		//ArrayList<PointMatch>[][] grid = new ArrayList<PointMatch>[gridW][gridH];
@@ -588,30 +599,30 @@ public class MatchLayersByMaxPMCC {
 		
 		for ( final PointMatch match : inliers )
 		{
-			int gridi = (int)Math.floor((match.getP1().getW()[0] - pmin[0]) / gridD);
-			int gridj = (int)Math.floor((match.getP1().getW()[1] - pmin[1]) / gridD);
+			int gridi = (int)Math.floor((match.getP1().getW()[0] - pmin[0]) / gridDW);
+			int gridj = (int)Math.floor((match.getP1().getW()[1] - pmin[1]) / gridDH);
 			if (gridi >= gridW)
 				gridi = gridW - 1;
 			if (gridj >= gridH)
 				gridj = gridH - 1;
+			//System.out.println(match.getP1().getW()[0] + "x" + match.getP1().getW()[1] + " -> " + gridi + "x" + gridj);
 			grid.get(gridi).get(gridj).add(match);
 		}
 				
-		for ( int i = 0; i < gridW; ++i )
-		{
-			for ( int j = 0; j < gridH; ++j )
-			{
-				System.out.println("grid " + i + "," + j + " size=" + grid.get(i).get(j).size());
-			}
-		}
+//		for ( int i = 0; i < gridW; ++i )
+//		{
+//			for ( int j = 0; j < gridH; ++j )
+//			{
+//				System.out.println("grid " + i + "," + j + " size=" + grid.get(i).get(j).size());
+//			}
+//		}
 		
 		boolean hasChanged = false;
 		
 		int p = 0;
-		System.out.print( "Smoothness filter pass  1:   0%" );
 		do
 		{
-			System.out.print( ( char )13 + "Smoothness filter pass " + String.format( "%2d", ++p ) + ":   0%" );
+			System.out.println( "Smoothness filter pass " + String.format( "%2d", ++p ));
 			hasChanged = false;
 			
 			final ArrayList< PointMatch > toBeRemoved = new ArrayList< PointMatch >();
@@ -688,9 +699,18 @@ public class MatchLayersByMaxPMCC {
 						
 						candidate.apply( localSmoothnessFilterModel );
 						final double candidateDistance = Point.distance( candidate.getP1(), candidate.getP2() );
-						if ( candidateDistance <= maxEpsilon )
+						
+						//
+						// TESTING - ignore trust region - just use maxEpsilon
+						// 
+						if ( candidateDistance > maxEpsilon )
 						{
-							PointMatch.apply( inliers, localSmoothnessFilterModel );
+							hasChanged = true;
+							toBeRemoved.add( candidate );
+						}
+						else
+						{
+							PointMatch.apply( localCandidates, localSmoothnessFilterModel );
 							
 							/* weighed mean Euclidean distances */
 							double meanDistance = 0, ws = 0;
@@ -707,13 +727,36 @@ public class MatchLayersByMaxPMCC {
 								hasChanged = true;
 								toBeRemoved.add( candidate );
 							}
+							
+							PointMatch.apply( localCandidates, ((InvertibleCoordinateTransform)localSmoothnessFilterModel).createInverse() );
 						}
-						else
-						{
-							hasChanged = true;
-							toBeRemoved.add( candidate );
-						}
+						
 					}
+					
+//					/* reset weights for next grid point - only necessary if all inliers are being considered */
+//					
+//					for (int offseti = -1; offseti <= 1; ++offseti)
+//					{
+//						int outeri = centrali + offseti;
+//						if (outeri < 0 || outeri >= gridW)
+//							continue;
+//						
+//						for (int offsetj = -1; offsetj <= 1; ++offsetj)
+//						{
+//							int outerj = centralj + offsetj;
+//							if (outerj < 0 || outerj >= gridH)
+//								continue;
+//							
+//							//System.out.println("  Outer Block " + outeri + " " + outerj);
+//							ArrayList<PointMatch> outerInliers = grid.get(outeri).get(outerj);
+//							
+//							for ( final PointMatch match : outerInliers )
+//							{
+//								match.setWeight( 0, 0 );
+//							}
+//						}
+//					}
+
 				}
 			}
 			inliers.removeAll( toBeRemoved );
@@ -849,6 +892,7 @@ public class MatchLayersByMaxPMCC {
 		return inliers.size() >= localSmoothnessFilterModel.getMinNumMatches();
 	}
 	
+		
 	
 	
 	public static void main( final String[] args )
