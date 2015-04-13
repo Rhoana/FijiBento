@@ -275,37 +275,44 @@ def optimize_meshes(mesh_file, matches_files, url_to_layerid, conf_dict={}):
 
         print "BT", between_mesh_weights
         start = time.time()
-        all_mesh_pts[1, 1500, 0] += 0.01
-        cost = mesh_derivs.all_derivs(all_mesh_pts,
-                                      d_cost_d_meshes,
-                                      neighbor_indices,
-                                      dists,
-                                      bary_indices,
-                                      bary_weights,
-                                      between_mesh_weights,
-                                      intra_slice_weight,
-                                      cross_slice_winsor,
-                                      intra_slice_winsor,
-                                      all_pairs,
-                                      1)
+        all_mesh_pts[1, 1500, 0] += 0.1
+        for n in range(10):
+            cost = mesh_derivs.all_derivs(all_mesh_pts,
+                                          d_cost_d_meshes,
+                                          neighbor_indices,
+                                          dists,
+                                          bary_indices,
+                                          bary_weights,
+                                          between_mesh_weights,
+                                          intra_slice_weight,
+                                          cross_slice_winsor,
+                                          intra_slice_winsor,
+                                          all_pairs,
+                                          1)
 
         tottime = time.time() - start
-        print "TIME", tottime, cost
+        print "TIME for 10", tottime, cost
 
-        all_mesh_pts[1, 1500, 0] += 0.000001
-        costn = mesh_derivs.all_derivs(all_mesh_pts,
-                                      d_cost_d_meshes,
-                                      neighbor_indices,
-                                      dists,
-                                      bary_indices,
-                                      bary_weights,
-                                      between_mesh_weights,
-                                      intra_slice_weight,
-                                      cross_slice_winsor,
-                                      intra_slice_winsor,
-                                      all_pairs,
-                                      1)
-        print "END", costn, costn - cost, d_cost_d_meshes[1, 1500, 0] * 0.000001
+        tmp1  = d_cost_d_meshes[1, 1500, 0]
+        step = 0.00021
+        all_mesh_pts[1, 1500, 0] += step
+        start = time.time()
+        for n in range(10):
+            costn = mesh_derivs.all_derivs(all_mesh_pts,
+                                           d_cost_d_meshes,
+                                           neighbor_indices,
+                                           dists,
+                                           bary_indices,
+                                           bary_weights,
+                                           between_mesh_weights,
+                                           intra_slice_weight,
+                                           cross_slice_winsor,
+                                           intra_slice_winsor,
+                                           all_pairs,
+                                           2)
+        tottime = time.time() - start
+        print "TIME for 10", tottime, cost
+        print "END", costn, costn - cost, (tmp1 + d_cost_d_meshes[1, 1500, 0]) * step / 2.0
         die
         # relaxation of the mesh
         relaxation_end = int(max_iterations * 0.75)

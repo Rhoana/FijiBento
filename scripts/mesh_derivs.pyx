@@ -1,4 +1,4 @@
-#cython: boundscheck=True, wraparound=False
+#cython: boundscheck=False, wraparound=False, cdivision=True
 from __future__ import division
 import numpy as np
 cimport numpy
@@ -20,12 +20,12 @@ cdef:
 # HUBER LOSS FUNCTION
 ##################################################
 cdef inline FLOAT_TYPE c_huber(FLOAT_TYPE value,
-                            FLOAT_TYPE target,
-                            FLOAT_TYPE sigma,
-                            FLOAT_TYPE d_value_dx,
-                            FLOAT_TYPE d_value_dy,
-                            FLOAT_TYPE *d_huber_dx,
-                            FLOAT_TYPE *d_huber_dy) nogil:
+                               FLOAT_TYPE target,
+                               FLOAT_TYPE sigma,
+                               FLOAT_TYPE d_value_dx,
+                               FLOAT_TYPE d_value_dy,
+                               FLOAT_TYPE *d_huber_dx,
+                               FLOAT_TYPE *d_huber_dy) nogil:
     cdef:
         FLOAT_TYPE diff, a, b, l
 
@@ -52,18 +52,13 @@ cpdef huber(value, target, sigma, dx, dy):
 ##################################################
 
 cdef inline FLOAT_TYPE c_reglen(FLOAT_TYPE vx,
-                             FLOAT_TYPE vy,
-                             FLOAT_TYPE d_vx_dx,
-                             FLOAT_TYPE d_vy_dy,
-                             FLOAT_TYPE *d_reglen_dx,
-                             FLOAT_TYPE *d_reglen_dy) nogil:
+                                FLOAT_TYPE vy,
+                                FLOAT_TYPE d_vx_dx,
+                                FLOAT_TYPE d_vy_dy,
+                                FLOAT_TYPE *d_reglen_dx,
+                                FLOAT_TYPE *d_reglen_dy) nogil:
     cdef:
         FLOAT_TYPE sq_len, sqrt_len
-
-    if (d_vx_dx != 1) or (d_vy_dy != 1):
-        with gil:
-            assert d_vx_dx == 1
-            assert d_vy_dy == 1
 
     sq_len = vx * vx + vy * vy + small_value
     sqrt_len = sqrt(sq_len)
@@ -116,9 +111,6 @@ cpdef FLOAT_TYPE crosslink_mesh_derivs(FLOAT_TYPE[:, ::1] mesh1,
         cost += h * all_weight
         dh_dx *= all_weight
         dh_dy *= all_weight
-        if i == 1500:
-            with gil:
-                print "     D:", r, "C:", cost, "HC:", h * all_weight, "DH:", dh_dx, dh_dy, "A:", all_weight, "P:", px, py, "Del:", px - qx, py - qy, "der:", dr_dx, dr_dy
 
         # update derivs
         d_cost_d_mesh1[i, 0] += dh_dx
@@ -130,8 +122,6 @@ cpdef FLOAT_TYPE crosslink_mesh_derivs(FLOAT_TYPE[:, ::1] mesh1,
         d_cost_d_mesh2[idx2[i, 0], 1] -= weight2[i, 0] * dh_dy
         d_cost_d_mesh2[idx2[i, 1], 1] -= weight2[i, 1] * dh_dy
         d_cost_d_mesh2[idx2[i, 2], 1] -= weight2[i, 2] * dh_dy
-    with gil:
-        print "     CCC", cost
     return cost
 
 
@@ -169,14 +159,6 @@ cpdef FLOAT_TYPE internal_mesh_derivs(FLOAT_TYPE[:, ::1] mesh,
         cost += h * all_weight
         dh_dx *= all_weight
         dh_dy *= all_weight
-
-        if i == 1500 or idx[i] == 1500:
-            with gil:
-                if i == 1500:
-                    print h * all_weight, dh_dx, dh_dy, cost
-                else:
-                    print -h * all_weight, "D", -dh_dx, -dh_dy, "C", cost
-                        
 
         # update derivs
         d_cost_d_mesh[i, 0] += dh_dx
@@ -225,8 +207,6 @@ cpdef FLOAT_TYPE all_derivs(FLOAT_TYPE[:, :, ::1] meshes,
             m1 = pairs_and_offsets[i, 0]
             m2 = pairs_and_offsets[i, 1]
             boffset = pairs_and_offsets[i, 2]
-            with gil:
-                print "CROSS", m1, m2, costs[tid]
             costs[tid] += crosslink_mesh_derivs(meshes[m1, ...],
                                                 meshes[m2, ...],
                                                 d_cost_per_thread[tid, m1, ...],
@@ -238,8 +218,6 @@ cpdef FLOAT_TYPE all_derivs(FLOAT_TYPE[:, :, ::1] meshes,
             # swap and do the other direction
             m1, m2 = m2, m1
             boffset = pairs_and_offsets[i, 3]
-            with gil:
-                print "CROSS", m1, m2, costs[tid]
             costs[tid] += crosslink_mesh_derivs(meshes[m1, ...],
                                                 meshes[m2, ...],
                                                 d_cost_per_thread[tid, m1, ...],
@@ -249,11 +227,11 @@ cpdef FLOAT_TYPE all_derivs(FLOAT_TYPE[:, :, ::1] meshes,
                                                 between_mesh_weights[i],
                                                 between_winsor)
 
+    with nogil, parallel(num_threads=num_threads):
+        tid = threadid()
         # compute interior costs and derivs, and sum into output derivs
         for i from tid <= i < num_meshes by num_threads:
             d_cost_d_meshes[i, ...] = 0
-            with gil:
-                print "INT", i
             for j from 0 <= j < num_internal_neighbors:
                 costs[tid] += internal_mesh_derivs(meshes[i, ...],
                                                    d_cost_d_meshes[i, ...],
