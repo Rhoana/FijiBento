@@ -324,6 +324,32 @@ public class MatchLayersByMaxPMCC {
 
 	/**
 	 * Receives a single layer, applies the transformations, and outputs the ip and mask
+	 * of the given level (render the ip and ipMask), according to a given bounding box
+	 * 
+	 * @param layerTileSpecs
+	 * @param ip
+	 * @param ipMask
+	 * @param mipmapLevel
+	 */
+	private static ByteProcessor tilespecToByteAndMask(
+			final TileSpecsImage layerTileSpecsImage,
+			final int layer,
+			final int mipmapLevel,
+			final float layerScale,
+			final String meshesDir,
+			final BoundingBox bbox )
+	{
+		final ByteProcessor tp;
+		if ( meshesDir == null )
+			tp = layerTileSpecsImage.render( layer, mipmapLevel, layerScale, bbox.getWidth(), bbox.getHeight(), bbox.getStartPoint().getX(), bbox.getStartPoint().getY(), true );
+		else
+			throw new UnsupportedOperationException( "No support yet for rendering using meshes and bounding box" );
+			//tp = layerTileSpecsImage.renderFromMeshes( meshesDir, layer, mipmapLevel, layerScale, bbox.getWidth(), bbox.getHeight(), bbox.getStartPoint().getX(), bbox.getStartPoint().getY() );
+		return tp;
+	}
+
+	/**
+	 * Receives a single layer, applies the transformations, and outputs the ip and mask
 	 * of the given level (render the ip and ipMask)
 	 * 
 	 * @param layerTileSpecs
@@ -922,12 +948,10 @@ public class MatchLayersByMaxPMCC {
 		}
 		
 		// TODO: load the tile specs to FloatProcessor objects
-//		final FloatProcessor ip1 = tilespecToFloatAndMask( layer1Img, layer1, mipmapLevel, param.layerScale, param.meshesDir1 );
-//		final FloatProcessor ip2 = tilespecToFloatAndMask( layer2Img, layer2, mipmapLevel, param.layerScale, param.meshesDir2 );
-//		final ByteProcessor ip1 = tilespecToByteAndMask( layer1Img, layer1, mipmapLevel, param.layerScale, param.meshesDir1 );
-//		final ByteProcessor ip2 = tilespecToByteAndMask( layer2Img, layer2, mipmapLevel, param.layerScale, param.meshesDir2 );
-		final FloatProcessor ip1 = tilespecToFloatAndMask( layer1Img, layer1, mipmapLevel, param.layerScale, param.meshesDir1, renderLayer1BBox );
-		final FloatProcessor ip2 = tilespecToFloatAndMask( layer2Img, layer2, mipmapLevel, param.layerScale, param.meshesDir2, renderLayer2BBox );
+		//final FloatProcessor ip1 = tilespecToFloatAndMask( layer1Img, layer1, mipmapLevel, param.layerScale, param.meshesDir1, renderLayer1BBox );
+		//final FloatProcessor ip2 = tilespecToFloatAndMask( layer2Img, layer2, mipmapLevel, param.layerScale, param.meshesDir2, renderLayer2BBox );
+		final ByteProcessor ip1 = tilespecToByteAndMask( layer1Img, layer1, mipmapLevel, param.layerScale, param.meshesDir1, renderLayer1BBox );
+		final ByteProcessor ip2 = tilespecToByteAndMask( layer2Img, layer2, mipmapLevel, param.layerScale, param.meshesDir2, renderLayer2BBox );
 		endTime = System.currentTimeMillis();
 		if ( PRINT_TIME_PER_STEP )
 			System.out.println("Creating images took: " + ((endTime - startTime) / 1000.0) + " sec");
@@ -971,12 +995,12 @@ public class MatchLayersByMaxPMCC {
 		{
 			System.out.println( "Trying to match " + v1Filtered.size() + " vertices." );
 			startTime = System.currentTimeMillis();
-			BlockMatching.matchByMaximalPMCC(
+			BlockMatchingNoScale.matchByMaximalPMCC(
 					ip1,
 					ip2,
 					null,//ip1Mask,
 					null,//ip2Mask,
-					1.0f,
+					//1.0f,
 					scaledInverseModel, //( ( InvertibleCoordinateTransform )model ).createInverse(),
 					blockRadius,
 					blockRadius,
@@ -1119,12 +1143,13 @@ public class MatchLayersByMaxPMCC {
 		{
 			System.out.println( "Trying to match " + v2Filtered.size() + " vertices." );
 			startTime = System.currentTimeMillis();
-			BlockMatching.matchByMaximalPMCC(
+			//BlockMatchingNoScale.matchByMaximalPMCC(
+			BlockMatchingNoScale.matchByMaximalPMCC(
 					ip2,
 					ip1,
 					null,//ip2Mask,
 					null,//ip1Mask,
-					1.0f,
+					//1.0f,
 					scaledModel, //model,
 					blockRadius,
 					blockRadius,
