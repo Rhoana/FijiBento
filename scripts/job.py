@@ -33,8 +33,8 @@ if not os.path.exists(LOGS_DIR) or not os.path.isdir(os.path.dirname(LOGS_DIR)):
 
 #Multicore settings
 ##MAX_CORES = 16
-MAX_CPUS_PER_NODE = 60
-MAX_MEMORY_MB = 128000
+MAX_CPUS_PER_NODE = 40
+MAX_MEMORY_MB = 80000
 MIN_TIME = 600
 MAX_JOBS_TO_SUBMIT = 100
 TIME_FACTOR = 4
@@ -103,7 +103,7 @@ class Job(object):
         if self.get_done():
            return 0
         print "RUN", self.name
-        print " ".join(self.command())
+        # print " ".join(self.command())
 
         work_queue = SBATCH_QUEUE
         # if self.get_threads_num() > 1:
@@ -138,7 +138,7 @@ class Job(object):
                 #print self.dependency_strings()
                 command_list = command_list + self.dependency_strings()
 
-            print command_list
+            # print command_list
 
             process = subprocess.Popen(command_list,
                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)

@@ -3,6 +3,7 @@ import ujson
 import numpy as np
 import sys
 import os
+import argparse
 import multiprocessing as mp
 import glob
 import utils
@@ -30,18 +31,15 @@ def create_chunks(l, n):
     sub_size = max(1, (len(l) - 1)/n + 1)
     return [l[i:i + sub_size] for i in range(0, len(l), sub_size)]
 
-def convert_files(files_list, json_dir, hdf5_dir):
+def convert_files(files_list, hdf5_dir):
     for f in files_list:
-        in_file = os.path.join(json_dir, f)
+        in_file = f
         out_file = os.path.join(hdf5_dir, "{}.hdf5".format(os.path.splitext(os.path.basename(f))[0]))
         if not os.path.exists(out_file):
             convert(in_file, out_file)
 
-def parallel_convert(processes_num, json_dir, hdf5_dir):
+def parallel_convert(processes_num, json_files, hdf5_dir):
     utils.create_dir(hdf5_dir)
-
-    # Get the json files list
-    json_files = glob.glob(os.path.join(json_dir, '*pmcc.json'))
 
     # create N-1 worker processes
     if processes_num > 1:
@@ -55,11 +53,11 @@ def parallel_convert(processes_num, json_dir, hdf5_dir):
 
     # run all jobs but one by other processes
     for sub_list in chunks[:-1]:
-        async_res = pool.apply_async(convert_files, (sub_list, json_dir, hdf5_dir))
+        async_res = pool.apply_async(convert_files, (sub_list, hdf5_dir))
 
     # run the last job by the current process
     print "running last list with {} files".format(len(chunks[-1]))
-    convert_files(chunks[-1], json_dir, hdf5_dir)
+    convert_files(chunks[-1], hdf5_dir)
 
     # wait for all other processes to finish their job
     if processes_num > 1:
@@ -67,10 +65,41 @@ def parallel_convert(processes_num, json_dir, hdf5_dir):
             pool.close()
             pool.join()
 
+def get_json_files_list(json_files_arg):
+    lst = []
+    for f in json_files_arg:
+        if f.endswith('.json'):
+            lst.append(f)
+        elif f.endswith('.txt'):
+            # Read the text file, and append all the json files
+            with open(f, 'r') as txt_data:
+                lst.extend(txt_data.readlines())
+    return lst
+
 
 if __name__ == '__main__':
-    processes_num = int(sys.argv[1])
-    json_dir = sys.argv[2]
-    hdf5_dir = sys.argv[3]
-    parallel_convert(processes_num, json_dir, hdf5_dir)
+
+    # Command line parser
+    parser = argparse.ArgumentParser(description='Converts pmcc json files to hdf5 format.')
+    parser.add_argument('json_files', metavar='json_files', type=str, nargs='+', 
+                        help='a list of files to convert, or a txt file that contains the list of files that need to be converted.')
+    parser.add_argument('-o', '--output_dir', type=str, 
+                        help='the directory where the hdf5 files will be stored (default: ./output)',
+                        default='./output')
+    parser.add_argument('-t', '--threads_num', type=int, 
+                        help='the number of threads (acutally processes) that will be used to convert the files. Works only when there are multiple json files to be converted (default: 1)',
+                        default=1)
+
+    args = parser.parse_args() 
+
+    processes_num = args.threads_num
+
+    json_files = get_json_files_list(args.json_files)
+    hdf5_dir = args.output_dir
+    utils.create_dir(hdf5_dir)
+
+    if len(json_files) == 1:
+        convert_files(json_files, hdf5_dir)
+    else:
+        parallel_convert(processes_num, json_files, hdf5_dir)
 

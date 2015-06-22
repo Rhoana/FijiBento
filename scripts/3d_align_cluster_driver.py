@@ -172,7 +172,7 @@ class MatchLayersByMaxPMCC(Job):
         self.threads = threads_num
         self.threads_str = '-t {0}'.format(threads_num)
         self.dependencies = dependencies
-        self.memory = 20000
+        self.memory = 32000
         self.time = 600
         self.is_java_job = True
         self.output = pmcc_output_file
@@ -191,6 +191,25 @@ class MatchLayersByMaxPMCC(Job):
                 ##    layers_data[i]['ransac'][i + j], imageWidth, imageHeight, \
                 ##    [ fixed_layer ], pmcc_fname, args.jar_file, conf_fname=args.conf_file_name)
                 ###match_layers_by_max_pmcc(args.jar_file, layer_to_ts_json[i], layer_to_ts_json[i + j], ransac_fname, imageWidth, imageHeight, [fixed_layer], pmcc_fname, conf)
+
+
+class ConvertPMCCToHdf5(Job):
+    def __init__(self, dependencies, pmcc_fname, output_fname):
+        Job.__init__(self)
+        self.already_done = False
+        self.pmcc_fname = '"{0}"'.format(pmcc_fname)
+        # Get the dir from the output_fname
+        output_dir = os.path.dirname(output_fname)
+        self.output_dir = '-o "{0}"'.format(output_dir)
+        self.dependencies = dependencies
+        self.memory = 4000
+        self.time = 30
+        self.output = output_fname
+
+    def command(self):
+        return ['python -u',
+                os.path.join(os.environ['ALIGNER'], 'scripts', 'pmcc_json_to_hdf5.py'),
+                self.output_dir, self.pmcc_fname]
 
 
 class OptimizeLayersElastic(Job):
@@ -223,7 +242,7 @@ class OptimizeLayersElastic(Job):
         self.threads = threads_num
         self.threads_str = '-t {0}'.format(threads_num)
         self.dependencies = dependencies
-        self.memory = 100000
+        self.memory = 32000
         self.time = 1400
         self.is_java_job = True
         self.output = outputs
@@ -313,6 +332,8 @@ if __name__ == '__main__':
     create_dir(after_ransac_dir)
     matched_pmcc_dir = os.path.join(args.workspace_dir, "matched_pmcc")
     create_dir(matched_pmcc_dir)
+    matched_pmcc_hdf5_dir = os.path.join(args.workspace_dir, "matched_pmcc_hdf5")
+    create_dir(matched_pmcc_hdf5_dir)
 
 
 
@@ -376,7 +397,7 @@ if __name__ == '__main__':
             layer_meshes_dir = os.path.join(meshes_dir, tiles_fname_prefix)
             if not os.path.exists(layer_meshes_dir):
                 print "Creating meshes of {0}".format(tiles_fname_prefix)
-                meshes_job = CreateMeshes(f, layer_meshes_dir, args.jar_file, threads_num=32)
+                meshes_job = CreateMeshes(f, layer_meshes_dir, args.jar_file, threads_num=4)
                 jobs[slayer]['meshes'].append(meshes_job)
                 all_running_jobs.append(meshes_job)
             layers_data[slayer]['meshes_dir'] = layer_meshes_dir
@@ -389,9 +410,9 @@ if __name__ == '__main__':
             for dep in jobs[slayer]['meshes']:
                 dependencies.append(dep)
             if args.render_meshes_first:
-                sift_job = CreateLayerSiftFeatures(dependencies, f, sifts_json, args.jar_file, meshes_dir=layers_data[slayer]['meshes_dir'], conf_fname=args.conf_file_name, threads_num=8)
+                sift_job = CreateLayerSiftFeatures(dependencies, f, sifts_json, args.jar_file, meshes_dir=layers_data[slayer]['meshes_dir'], conf_fname=args.conf_file_name, threads_num=4)
             else:
-                sift_job = CreateLayerSiftFeatures(dependencies, f, sifts_json, args.jar_file, conf_fname=args.conf_file_name, threads_num=8)
+                sift_job = CreateLayerSiftFeatures(dependencies, f, sifts_json, args.jar_file, conf_fname=args.conf_file_name, threads_num=4)
             jobs[slayer]['sifts'].append(sift_job)
             all_running_jobs.append(sift_job)
 
@@ -540,16 +561,40 @@ if __name__ == '__main__':
                         layers_data[si]['ransac'][sij], imageWidth, imageHeight, 
                         fixed_layers, pmcc_fname, args.jar_file, 
                         meshes_dir1=layers_data[si]['meshes_dir'], meshes_dir2=layers_data[sij]['meshes_dir'],
-                        conf_fname=args.conf_file_name, threads_num=32, auto_add_model=args.auto_add_model)
+                        conf_fname=args.conf_file_name, threads_num=4, auto_add_model=args.auto_add_model)
                 else:
                     job_pmcc = MatchLayersByMaxPMCC(dependencies, layers_data[si]['ts'], layers_data[sij]['ts'], 
                         layers_data[si]['ransac'][sij], imageWidth, imageHeight, 
-                        fixed_layers, pmcc_fname, args.jar_file, conf_fname=args.conf_file_name, threads_num=32, auto_add_model=args.auto_add_model)
+                        fixed_layers, pmcc_fname, args.jar_file, conf_fname=args.conf_file_name, threads_num=4, auto_add_model=args.auto_add_model)
                 pmcc_jobs.append(job_pmcc)
                 all_running_jobs.append(job_pmcc)
             layers_data[si]['matched_pmcc'][sij] = pmcc_fname
 
-            all_pmcc_files.append(pmcc_fname)
+            # match by max PMCC the two layers
+            pmcc_hdf5_fname = pmcc_fname.replace('.json', '.hdf5')
+            if not os.path.exists(pmcc_hdf5_fname):
+                print "Converting PMCC to hdf5 of layers: {0} and {1}".format(i, i + j)
+                dependencies = [ ]
+                if job_ransac != None:
+                    dependencies.append(job_ransac)
+                if job_match != None:
+                    dependencies.append(job_match)
+                for dep in jobs[si]['sifts']:
+                    dependencies.append(dep)
+                for dep in jobs[si]['meshes']:
+                    dependencies.append(dep)
+                for dep in jobs[sij]['sifts']:
+                    dependencies.append(dep)
+                for dep in jobs[sij]['meshes']:
+                    dependencies.append(dep)
+                if job_pmcc != None:
+                    dependencies.append(job_pmcc)
+
+                job_pmcc_hdf5 = ConvertPMCCToHdf5(dependencies, pmcc_fname, pmcc_hdf5_fname)
+                all_running_jobs.append(job_pmcc_hdf5)
+            layers_data[si]['matched_pmcc_hdf5'][sij] = pmcc_hdf5_fname
+
+            all_pmcc_hdf5_files.append(pmcc_hdf5_fname)
 
 
             j += 1
@@ -557,13 +602,13 @@ if __name__ == '__main__':
 
 
 
-    print "all_pmcc_files: {0}".format(all_pmcc_files)
+    print "all_pmcc_hdf5_files: {0}".format(all_pmcc_hdf5_files)
 
     # Create a single file that lists all tilespecs and a single file that lists all pmcc matches (the os doesn't support a very long list)
     ts_list_file = os.path.join(args.workspace_dir, "all_ts_files.txt")
     write_list_to_file(ts_list_file, all_ts_files)
-    pmcc_list_file = os.path.join(args.workspace_dir, "all_pmcc_files.txt")
-    write_list_to_file(pmcc_list_file, all_pmcc_files)
+    pmcc_hdf5_list_file = os.path.join(args.workspace_dir, "all_pmcc_hdf5_files.txt")
+    write_list_to_file(pmcc_hdf5_list_file, all_pmcc_hdf5_files)
 
 
     # Optimize all layers to a single 3d image
@@ -577,9 +622,9 @@ if __name__ == '__main__':
     #job_optimize = OptimizeLayersElastic(dependencies, sections_outputs, [ ts_list_file ], [ pmcc_list_file ],
     #    imageWidth, imageHeight, fixed_layers, args.output_dir, args.max_layer_distance, args.jar_file, conf_fname=args.conf_file_name,
     #    skip_layers=args.skip_layers, threads_num=32, manual_matches=args.manual_match)
-    job_optimize = OptimizeLayersElastic(dependencies, sections_outputs, [ ts_list_file ], [ pmcc_list_file ],
+    job_optimize = OptimizeLayersElastic(dependencies, sections_outputs, [ ts_list_file ], [ pmcc_hdf5_list_file ],
         imageWidth, imageHeight, fixed_layers, args.output_dir, args.max_layer_distance, args.jar_file, conf_fname=args.conf_file_name,
-        skip_layers=args.skip_layers, threads_num=32)
+        skip_layers=args.skip_layers, threads_num=4)
 
 
     # Run all jobs

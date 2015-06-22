@@ -33,7 +33,7 @@ def match_layers_by_max_pmcc(jar_file, tiles_file1, tiles_file2, models_file, im
     if auto_add_model:
         auto_add_model_str = "--autoAddModel"
 
-    java_cmd = 'java -Xmx16g -XX:ParallelGCThreads={0} -Djava.awt.headless=true -cp "{1}" org.janelia.alignment.MatchLayersByMaxPMCC --inputfile1 {2} --inputfile2 {3} \
+    java_cmd = 'java -Xmx29g -XX:ParallelGCThreads={0} -Djava.awt.headless=true -cp "{1}" org.janelia.alignment.MatchLayersByMaxPMCC --inputfile1 {2} --inputfile2 {3} \
             --modelsfile1 {4} --imageWidth {5} --imageHeight {6} {7} {8} {9} --targetPath {10} {11} {12}'.format(
         utils.get_gc_threads_num(threads_num),
         jar_file,
