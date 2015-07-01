@@ -563,7 +563,8 @@ public class MatchLayersByMaxPMCC {
 					param.maxCurvatureR,
 					v1,
 					pm12,
-					new ErrorStatistic( 1 ) );
+					new ErrorStatistic( 1 ),
+					param.numThreads );
 			endTime = System.currentTimeMillis();
 			if ( PRINT_TIME_PER_STEP )
 				System.out.println("Block matching 1 took: " + ((endTime - startTime) / 1000.0) + " sec");
@@ -679,7 +680,8 @@ public class MatchLayersByMaxPMCC {
 					param.maxCurvatureR,
 					v2,
 					pm21,
-					new ErrorStatistic( 1 ) );
+					new ErrorStatistic( 1 ),
+					param.numThreads );
 			endTime = System.currentTimeMillis();
 			if ( PRINT_TIME_PER_STEP )
 				System.out.println("Block matching 2 took: " + ((endTime - startTime) / 1000.0) + " sec");
