@@ -333,13 +333,31 @@ public class BlockMatchingNoScale
 					final int ptx = px - blockRadiusX;
 					final int pty = py - blockRadiusY;
 					if ( ptx >= 0 && ptx + blockWidth < source.getWidth() && pty >= 0 && pty + blockHeight < source.getHeight() )
-					{
+					{						
 						final float sourceBlockMean = blockMean( source, ptx, pty, blockWidth, blockHeight );
 						if ( Float.isNaN( sourceBlockMean ) )
 							return null;
 						final float sourceBlockStd = ( float ) Math.sqrt( blockVariance( source, ptx, pty, blockWidth, blockHeight, sourceBlockMean ) );
 						if ( sourceBlockStd == 0 )
 							return null;
+
+//						ByteProcessor mini_source = new ByteProcessor(blockWidth, blockHeight);
+//						for ( int y = 0; y < blockHeight; y++ ) {
+//							for ( int x = 0; x < blockWidth; x++ ) {
+//								mini_source.set(x, y, source.get( x + ptx, y + pty) );
+//							}
+//						}
+//
+//						ByteProcessor mini_target = new ByteProcessor(blockWidth + 2 * searchRadiusX + 1, blockHeight + 2 * searchRadiusY + 1);
+//						for ( int y = 0; y < blockHeight + 2 * searchRadiusY + 1; y++ ) {
+//							for ( int x = 0; x < blockWidth + 2 * searchRadiusX + 1; x++ ) {
+//								mini_target.set(x, y, target.get( x + ptx, y + pty) );
+//							}
+//						}
+//						
+//						final long curTime = System.currentTimeMillis();
+//						IJ.save(new ImagePlus( "Scaled Source", mini_source ), "/tmp/source_mini_" + curTime + ".png" );
+//						IJ.save(new ImagePlus( "Mapped Target", mini_target ), "/tmp/target_mini_" + curTime + ".png" );
 
 						float tx = 0;
 						float ty = 0;
@@ -385,6 +403,8 @@ public class BlockMatchingNoScale
 							}
 						}
 						
+//						IJ.save(new ImagePlus( "RMap Target", rMap ), "/tmp/rmap_mini_" + curTime + ".png" );
+
 						/* <visualisation> */
 //						synchronized ( rMapStack )
 //						{
@@ -669,7 +689,7 @@ public class BlockMatchingNoScale
     	//source = (ByteProcessor)Filter.createDownsampled( source, 1.0f, 0.5f, minSigma );
     	source = ( ByteProcessor )source.duplicate();
     	Filter.smoothForScale( source, 1.0f, 0.5f, minSigma );
-    	normalizeContrast( source );
+    	//normalizeContrast( source );
     	
     	/* Scaled source mask */
     	if ( sourceMask != null )
@@ -683,7 +703,7 @@ public class BlockMatchingNoScale
     	target = ( ByteProcessor )target.duplicate();
     	
     	Filter.smoothForScale( target, 1.0f, 0.5f, minSigma );
-    	normalizeContrast( target );
+    	//normalizeContrast( target );
     	
     	final ByteProcessor mappedScaledTarget = new ByteProcessor( source.getWidth() + 2 * actualSearchRadiusX, source.getHeight() + 2 * actualSearchRadiusX );
 		//Util.fillWithNaN( mappedScaledTarget );
@@ -724,8 +744,8 @@ public class BlockMatchingNoScale
 //		new ImagePlus( "Scaled Source", source ).show();
 //		new ImagePlus( "Mapped Target", mappedScaledTarget ).show();
 //		final long curTime = System.currentTimeMillis();
-//		IJ.save(new ImagePlus( "Scaled Source", source ), "source_" + curTime + ".png" );
-//		IJ.save(new ImagePlus( "Mapped Target", mappedScaledTarget ), "target_" + curTime + ".png" );
+//		IJ.save(new ImagePlus( "Scaled Source", source ), "/tmp/source_" + curTime + ".png" );
+//		IJ.save(new ImagePlus( "Mapped Target", mappedScaledTarget ), "/tmp/target_" + curTime + ".png" );
 //		/* </visualization> */
 		
 		final Map< Point, Point > actualSourcePoints = new HashMap< Point, Point>();
