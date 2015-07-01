@@ -6,6 +6,7 @@ import ij.process.ByteProcessor;
 import ij.process.ColorProcessor;
 import ij.process.ImageProcessor;
 
+import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileInputStream;
@@ -34,12 +35,16 @@ import org.nustaq.serialization.FSTObjectOutput;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
+import mpicbg.models.AbstractAffineModel2D;
 import mpicbg.models.AffineModel2D;
 import mpicbg.models.CoordinateTransform;
 import mpicbg.models.CoordinateTransformList;
 import mpicbg.models.CoordinateTransformMesh;
 import mpicbg.models.PointMatch;
+import mpicbg.models.RigidModel2D;
+import mpicbg.models.SimilarityModel2D;
 import mpicbg.models.TransformMesh;
+import mpicbg.models.TranslationModel2D;
 import mpicbg.trakem2.transform.TransformMeshMappingWithMasks;
 import mpicbg.trakem2.transform.TransformMeshMappingWithMasks.ImageProcessorWithMasks;
 import mpicbg.util.Util;
@@ -185,10 +190,12 @@ public class TileSpecsImage {
 			tsMipmapEntry = tsMipmapLevels.get( key );
 			final String imgUrl = tsMipmapEntry.imageUrl;
 			System.out.println( "Rendering tile: " + imgUrl );
+			long startTime = System.currentTimeMillis();
 			if ( ( usePersistance ) &&
 				 ( persistentImageCache.containsKey( layer ) ) && ( persistentImageCache.get( layer ).containsKey( imgUrl ) ) )
 			{
 				// load from cache
+				System.out.println( "Loading image from cache" );
 				HashMap< String, ImageProcessor > imgUrlToIp = persistentImageCache.get( layer );
 				tsIpMipmap = imgUrlToIp.get( imgUrl );
 			}
@@ -219,6 +226,10 @@ public class TileSpecsImage {
 					imgUrlToIp.put( imgUrl, tsIpMipmap );
 				}
 			}
+			long endTime = System.currentTimeMillis();
+			if ( PRINT_TIME_PER_STEP )
+				System.out.println("Loading tile-image file took: " + ((endTime - startTime) / 1000.0) + " sec");
+
 			
 			/* open mask */
 			final ByteProcessor bpMaskSource;
@@ -247,6 +258,7 @@ public class TileSpecsImage {
 			}
 			
 			
+			startTime = System.currentTimeMillis();
 			/* attach mipmap transformation */
 			final CoordinateTransformList< CoordinateTransform > ctl = ts.createTransformList();
 			final AffineModel2D scaleTransform = new AffineModel2D();
@@ -259,9 +271,14 @@ public class TileSpecsImage {
 			ctlMipmap.add( ctl );
 			
 			/* create mesh */
+			int fromX = ( int )Math.floor( ts.bbox[0] );
+			int toX = ( int )Math.ceil( ts.bbox[1] );
+			int tileWidth = toX - fromX;
+
 			final CoordinateTransformMesh mesh = new CoordinateTransformMesh( 
-					ctlMipmap, 
-					( int )( boundingBox.getWidth() / triangleSize + 0.5 ), 
+					ctlMipmap,//optimizedCtl, 
+					//( int )( boundingBox.getWidth() / triangleSize + 0.5 ), 
+					( int )( tileWidth / triangleSize + 0.5 ), 
 					tsIpMipmap.getWidth(), 
 					tsIpMipmap.getHeight(), 
 					threadsNum );
@@ -270,7 +287,11 @@ public class TileSpecsImage {
 			final ImageProcessorWithMasks target = new ImageProcessorWithMasks( tp, bpMaskTarget, null );
 			final TransformMeshMappingWithMasks< TransformMesh > mapping = new TransformMeshMappingWithMasks< TransformMesh >( mesh );
 			mapping.mapInterpolated( source, target, threadsNum );
-			
+
+			endTime = System.currentTimeMillis();
+			if ( PRINT_TIME_PER_STEP )
+				System.out.println("Applying transformations to tile took: " + ((endTime - startTime) / 1000.0) + " sec");
+
 			/* convert to 24bit RGB */
 			tp.setMinAndMax( ts.minIntensity, ts.maxIntensity );
 		}

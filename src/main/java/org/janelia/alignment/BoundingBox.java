@@ -278,4 +278,18 @@ public class BoundingBox {
 			return true;
 		return false;
 	}
+	
+	public boolean containsPoint( int x, int y ) {
+		return ( (x >= startPoint.getX()) && (x <= endPoint.getX()) &&
+				(y >= startPoint.getY()) && (y <= endPoint.getY()) );
+	}
+
+	public int getMinimalL1DistanceToBBox( int x, int y ) {
+		int dist = Math.abs( x - startPoint.getX() );
+		dist = Math.min( dist, Math.abs( x - endPoint.getX() ) );
+		dist = Math.min( dist, Math.abs( y - startPoint.getY() ) );
+		dist = Math.min( dist, Math.abs( y - endPoint.getY() ) );
+		return dist;
+	}
+
 }

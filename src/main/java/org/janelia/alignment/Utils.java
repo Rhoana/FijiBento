@@ -268,7 +268,14 @@ public class Utils
 	 */
 	final static public ImagePlus openImagePlusUrl( final String urlString )
 	{
-		final ImagePlus imp = new Opener().openURL( imageJUrl( urlString ) );
+		final ImagePlus imp;
+		if ( urlString.toLowerCase().endsWith( "bmp" ) && ( urlString.startsWith( "file" ) ) )
+		{
+			System.out.println( "bmp file: " + urlString.replace( "file:", "" ) );
+			imp = new Opener().openImage( urlString.replace( "file:", "" ) );
+		}
+		else
+			imp = new Opener().openURL( imageJUrl( urlString ) );
 		return imp;
 	}
 	
