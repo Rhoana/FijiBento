@@ -276,7 +276,7 @@ public class TransformMeshMappingWithMasks< T extends TransformMesh > extends mp
 						//e.printStackTrace( System.err );
 						continue;
 					}
-					target.set( x, y, source.getPixelInterpolated( t[ 0 ], t[ 1 ] ) );
+					target.set( x, y, (int)Math.round(source.getInterpolatedPixel( t[ 0 ], t[ 1 ] )) );
 					targetOutside.set( x, y, 0xff );
 				}
 			}
