@@ -11,8 +11,13 @@ import argparse
 import utils
 
 def get_image_size(image_file):
-    img = cv2.imread(image_file, 0)
-    return img.shape
+    if image_file.endswith('.tif'):
+        with tifffile.TiffFile(image_file) as tiffinfo:
+            image_size = tiffinfo.pages[0].shape
+            return image_size
+    else:
+        img = cv2.imread(image_file, 0)
+        return img.shape
 
 
 def path2url(path):
@@ -20,8 +25,8 @@ def path2url(path):
 
 def extract_coords(filename, image_size):
     m = re.match('.*_tr([0-9]+)-tc([0-9]+)_.*[.].*', os.path.basename(filename))
-    offset_y = (int(m.group(1)) - 1) * image_size[0]
-    offset_x = (int(m.group(2)) - 1) * image_size[1]
+    offset_y = (int(m.group(1)) - 1) * (image_size[0] - 1)
+    offset_x = (int(m.group(2)) - 1) * (image_size[1] - 1)
     return int(offset_x), int(offset_y)
 
 def find_image_files(subdir):
@@ -119,13 +124,13 @@ def create_2d_output_tilespecs(json_input_dir, render_input_dir, output_dir):
     all_files_folders = glob.glob(os.path.join(render_input_dir, '*'))
     all_files_folders.sort(key=lambda s: s.lower())
     for file_or_folder in all_files_folders:
-        json_path = os.path.join(json_input_dir, os.path.basename(file_or_folder) + '.json')
+        json_path = os.path.join(json_input_dir, os.path.splitext(os.path.basename(file_or_folder))[0] + '.json')
         if not (os.path.exists(json_path) and os.path.isfile(json_path)):
             print('Error: could not find the json file for {} (the search for {} has failed).'.format(file_or_folder, json_path))
 
         layer = utils.read_layer_from_file(json_path)
 
-        output_path = os.path.join(output_dir, os.path.basename(file_or_folder) + '.json')
+        output_path = os.path.join(output_dir, os.path.splitext(os.path.basename(file_or_folder))[0] + '.json')
         if os.path.isdir(file_or_folder):
             write_tilespec_from_folder(os.path.join(file_or_folder, '0'), output_path, layer)
         elif os.path.isfile(file_or_folder):
