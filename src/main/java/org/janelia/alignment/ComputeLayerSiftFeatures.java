@@ -181,6 +181,8 @@ public class ComputeLayerSiftFeatures {
 		siftParam.fdSize = params.fdSize;
 		siftParam.fdBins = params.fdBins;
 	
+		ij.Prefs.setThreads( params.numThreads );
+		
 		// Create the layer image
 		final TileSpecsImage singleTileImage = TileSpecsImage.createImageFromFile( params.url );
 		singleTileImage.setThreadsNum( params.numThreads );
