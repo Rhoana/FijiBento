@@ -950,10 +950,10 @@ public class MatchLayersByMaxPMCC {
 		}
 		
 		// TODO: load the tile specs to FloatProcessor objects
-		//final FloatProcessor ip1 = tilespecToFloatAndMask( layer1Img, layer1, mipmapLevel, param.layerScale, param.meshesDir1, renderLayer1BBox );
-		//final FloatProcessor ip2 = tilespecToFloatAndMask( layer2Img, layer2, mipmapLevel, param.layerScale, param.meshesDir2, renderLayer2BBox );
-		final ByteProcessor ip1 = tilespecToByteAndMask( layer1Img, layer1, mipmapLevel, param.layerScale, param.meshesDir1, renderLayer1BBox );
-		final ByteProcessor ip2 = tilespecToByteAndMask( layer2Img, layer2, mipmapLevel, param.layerScale, param.meshesDir2, renderLayer2BBox );
+		final FloatProcessor ip1 = tilespecToFloatAndMask( layer1Img, layer1, mipmapLevel, param.layerScale, param.meshesDir1, renderLayer1BBox );
+		final FloatProcessor ip2 = tilespecToFloatAndMask( layer2Img, layer2, mipmapLevel, param.layerScale, param.meshesDir2, renderLayer2BBox );
+		//final ByteProcessor ip1 = tilespecToByteAndMask( layer1Img, layer1, mipmapLevel, param.layerScale, param.meshesDir1, renderLayer1BBox );
+		//final ByteProcessor ip2 = tilespecToByteAndMask( layer2Img, layer2, mipmapLevel, param.layerScale, param.meshesDir2, renderLayer2BBox );
 		endTime = System.currentTimeMillis();
 		if ( PRINT_TIME_PER_STEP )
 			System.out.println("Creating images took: " + ((endTime - startTime) / 1000.0) + " sec");
@@ -997,12 +997,12 @@ public class MatchLayersByMaxPMCC {
 		{
 			System.out.println( "Trying to match " + v1Filtered.size() + " vertices." );
 			startTime = System.currentTimeMillis();
-			BlockMatchingNoScale.matchByMaximalPMCC(
+			BlockMatching.matchByMaximalPMCC(
 					ip1,
 					ip2,
 					null,//ip1Mask,
 					null,//ip2Mask,
-					//1.0f,
+					1.0f,
 					scaledInverseModel, //( ( InvertibleCoordinateTransform )model ).createInverse(),
 					blockRadius,
 					blockRadius,
@@ -1013,7 +1013,8 @@ public class MatchLayersByMaxPMCC {
 					param.maxCurvatureR,
 					v1Filtered,
 					pm12,
-					new ErrorStatistic( 1 ) );
+					new ErrorStatistic( 1 ),
+					param.numThreads );
 			endTime = System.currentTimeMillis();
 			if ( PRINT_TIME_PER_STEP )
 				System.out.println("Block matching 1 took: " + ((endTime - startTime) / 1000.0) + " sec");
@@ -1146,12 +1147,12 @@ public class MatchLayersByMaxPMCC {
 			System.out.println( "Trying to match " + v2Filtered.size() + " vertices." );
 			startTime = System.currentTimeMillis();
 			//BlockMatchingNoScale.matchByMaximalPMCC(
-			BlockMatchingNoScale.matchByMaximalPMCC(
+			BlockMatching.matchByMaximalPMCC(
 					ip2,
 					ip1,
 					null,//ip2Mask,
 					null,//ip1Mask,
-					//1.0f,
+					1.0f,
 					scaledModel, //model,
 					blockRadius,
 					blockRadius,
@@ -1162,7 +1163,8 @@ public class MatchLayersByMaxPMCC {
 					param.maxCurvatureR,
 					v2Filtered,
 					pm21,
-					new ErrorStatistic( 1 ) );
+					new ErrorStatistic( 1 ),
+					param.numThreads );
 			endTime = System.currentTimeMillis();
 			if ( PRINT_TIME_PER_STEP )
 				System.out.println("Block matching 2 took: " + ((endTime - startTime) / 1000.0) + " sec");
