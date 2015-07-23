@@ -2,14 +2,37 @@ import sys
 import os
 import glob
 import argparse
-from subprocess import call
+from bounding_box import BoundingBox
 import utils
+import json
 
+def add_transformation(in_file, out_file, transform, deltas):
+    # load the current json file
+    with open(in_file, 'r') as f:
+        data = json.load(f)
 
-def normalize_coordinates(tile_fnames_or_dir, output_dir, jar_file):
+    if deltas[0] != 0.0 and deltas[1] != 0.0:
+        for tile in data:
+            # Update the transformation
+            if "transforms" not in tile.keys():
+                tile["transforms"] = []
+            tile["transforms"].append(transform)
 
+            # Update the bbox
+            if "bbox" in tile.keys():
+                bbox = tile["bbox"]
+                bbox_new = [bbox[0] - deltas[0], bbox[1] - deltas[0], bbox[2] - deltas[1], bbox[3] - deltas[1]]
+                tile["bbox"] = bbox_new
+
+    with open(out_file, 'w') as f:
+        json.dump(data, f, indent=4)
+ 
+
+def normalize_coordinates(tile_fnames_or_dir, output_dir):
+    # Get all the files that need to be normalized
     all_files = []
 
+    print "Reading {}".format(tile_fnames_or_dir)
     for file_or_dir in tile_fnames_or_dir:
         if not os.path.exists(file_or_dir):
             print "{0} does not exist (file/directory), skipping".format(file_or_dir)
@@ -25,22 +48,33 @@ def normalize_coordinates(tile_fnames_or_dir, output_dir, jar_file):
         print "No files for normalization found. Exiting."
         return
 
-    print "Normalizing coordinates of {0} files".format(all_files)
+    print "Normalizing coordinates of {0} files".format(len(all_files))
 
-    files_urls = []
-    for file_name in all_files:
-        tiles_url = utils.path2url(file_name)
-        files_urls.append(tiles_url)
+    # Retrieve the bounding box of these files
+    entire_image_bbox = None
+    
+    # merge the bounding boxes to a single bbox
+    if len(all_files) > 0:
+        entire_image_bbox = BoundingBox.read_bbox(all_files[0])
+        for f in all_files:
+            entire_image_bbox.extend(BoundingBox.read_bbox(f))
+    
+    print "Entire 3D image bounding box: {}".format(entire_image_bbox.toStr())
 
-    list_file = os.path.join(output_dir, "all_files.txt")
-    print "list_file", list_file
-    utils.write_list_to_file(list_file, files_urls)
+    # Set the translation transformation
+    deltaX = entire_image_bbox.from_x
+    deltaY = entire_image_bbox.from_y
 
-    list_file_url = utils.path2url(list_file)
+    transform = {
+            "className" : "mpicbg.trakem2.transform.TranslationModel2D",
+            "dataString" : "{0} {1}".format(-deltaX, -deltaY)
+        }
 
-    java_cmd = 'java -Xmx3g -XX:ParallelGCThreads=1 -Djava.awt.headless=true -cp "{0}" org.janelia.alignment.NormalizeCoordinates --targetDir {1} {2}'.format(\
-        jar_file, output_dir, list_file_url)
-    utils.execute_shell_command(java_cmd)
+    # Add the transformation to each tile in each tilespec
+    for in_file in all_files:
+        out_file = os.path.join(output_dir, os.path.basename(in_file))
+        add_transformation(in_file, out_file, transform, [deltaX, deltaY])
+
 
 
 def main():
@@ -51,15 +85,12 @@ def main():
     parser.add_argument('-o', '--output_dir', type=str, 
                         help='an output directory (default: ./after_norm)',
                         default='./after_norm')
-    parser.add_argument('-j', '--jar_file', type=str,
-                        help='the jar file that includes the render (default: ../target/render-0.0.1-SNAPSHOT.jar)',
-                        default='../target/render-0.0.1-SNAPSHOT.jar')
 
     args = parser.parse_args()
 
     utils.create_dir(args.output_dir)
 
-    normalize_coordinates(args.tile_files_or_dirs, args.output_dir, args.jar_file)
+    normalize_coordinates(args.tile_files_or_dirs, args.output_dir)
 
 if __name__ == '__main__':
     main()

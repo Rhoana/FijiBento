@@ -11,7 +11,7 @@ def render_3d(tile_fnames_or_dir_fname, output_dir, from_layer, to_layer, scale,
 
     list_file_url = utils.path2url(tile_fnames_or_dir_fname)
 
-    java_cmd = 'java -Xmx32g -XX:ParallelGCThreads=1 -cp "{0}" org.janelia.alignment.Render3D --targetDir {1} --scale {2} \
+    java_cmd = 'java -Xmx36g -XX:ParallelGCThreads=1 -cp "{0}" org.janelia.alignment.Render3D --targetDir {1} --scale {2} \
         --threads {3} --fromLayer {4} --toLayer {5} --fromX {6} --fromY {7} --toX {8} --toY {9} --hide {10}'.format(\
             jar_file, output_dir, scale, threads_num, from_layer, to_layer,
             from_x, from_y, to_x, to_y, list_file_url)

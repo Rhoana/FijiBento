@@ -44,23 +44,21 @@ class UpdateBoundingBox(Job):
 
 
 class NormalizeCoordinates(Job):
-    def __init__(self, dependencies, tiles_fnames, output_dir, jar_file, outputs):
+    def __init__(self, dependencies, tiles_fnames, output_dir, outputs):
         Job.__init__(self)
         self.already_done = False
         self.tiles_fnames = '{0}'.format(" ".join(tiles_fnames))
         self.output_dir = '-o "{0}"'.format(output_dir)
-        self.jar_file = '-j "{0}"'.format(jar_file)
         self.dependencies = dependencies
-        self.memory = 4000
-        self.time = 100
-        self.is_java_job = True
+        self.memory = 8000
+        self.time = 200
         self.output = outputs
         #self.already_done = os.path.exists(self.output_file)
 
     def command(self):
         return ['python -u',
                 os.path.join(os.environ['RENDERER'], 'scripts', 'normalize_coordinates.py'),
-                self.output_dir, self.jar_file, self.tiles_fnames]
+                self.output_dir, self.tiles_fnames]
 
 
 
@@ -82,7 +80,7 @@ class Render3D(Job):
         self.dependencies = dependencies
         self.threads = threads_num
         self.threads_str = "-t {0}".format(threads_num)
-        self.memory = 33000
+        self.memory = 40000
         self.time = 300
         self.is_java_job = True
         self.output = output_file
@@ -196,7 +194,7 @@ if __name__ == '__main__':
             break
 
     if not normalized_all_files:
-        norm_job = NormalizeCoordinates(jobs['bbox'], bbox_files, norm_dir, args.jar_file, norm_files)
+        norm_job = NormalizeCoordinates(jobs['bbox'], bbox_files, norm_dir, norm_files)
         bbox_and_norm_jobs.append(norm_job)
 
     norm_list_file = os.path.join(args.workspace_dir, "all_norm_files.txt")

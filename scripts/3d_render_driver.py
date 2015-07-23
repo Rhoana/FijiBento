@@ -137,7 +137,7 @@ for i in range(len(all_layers) - 1):
 
 # Normalize the sections
 print [layer_to_bbox[l] for l in layer_to_bbox.keys()]
-normalize_coordinates([layer_to_bbox[l] for l in layer_to_bbox.keys()], norm_dir, args.jar_file)
+normalize_coordinates([layer_to_bbox[l] for l in layer_to_bbox.keys()], norm_dir)
 
 norm_list_file = os.path.join(args.workspace_dir, "all_norm_files.txt")
 write_list_to_file(norm_list_file, all_norm_files)
