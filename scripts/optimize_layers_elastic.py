@@ -128,7 +128,7 @@ def optimize_layers_elastic(tile_files, corr_files, image_width, image_height, f
     conf_dict = {}
     if conf is not None:
         with open(conf, 'r') as f:
-            conf_dict = json.load(f)["OptimizeLayersElasticTheano"]
+            conf_dict = json.load(f)["OptimizeLayersElastic"]
 
     # Create a per-layer optimized mesh
     optimized_meshes = optimize_meshes(mesh_json, actual_corr_files, tsfile_to_layerid, conf_dict)
@@ -211,7 +211,7 @@ def main():
     print "corr_files: {0}".format(args.corr_files)
     print "manual_match: {0}".format(args.manual_match)
 
-    optimize_layers_elastic_theano(args.tile_files, args.corr_files,
+    optimize_layers_elastic(args.tile_files, args.corr_files,
         args.image_width, args.image_height, args.fixed_layers, args.output_dir, args.max_layer_distance,
         args.jar_file,
         conf=args.conf_file_name, 

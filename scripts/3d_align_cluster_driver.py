@@ -459,13 +459,14 @@ if __name__ == '__main__':
 
 
     # Match and optimize each two layers in the required distance
-    all_pmcc_files = []
+    all_pmcc_hdf5_files = []
     pmcc_jobs = []
     for ei, i in enumerate(all_layers):
         si = str(i)
         layers_data[si]['matched_sifts'] = {}
         layers_data[si]['ransac'] = {}
         layers_data[si]['matched_pmcc'] = {}
+        layers_data[si]['matched_pmcc_hdf5'] = {}
         # layers_to_process = min(i + args.max_layer_distance + 1, all_layers[-1] + 1) - i
         # to_range = range(1, layers_to_process)
         # # add manual matches
@@ -571,7 +572,7 @@ if __name__ == '__main__':
             layers_data[si]['matched_pmcc'][sij] = pmcc_fname
 
             # match by max PMCC the two layers
-            pmcc_hdf5_fname = pmcc_fname.replace('.json', '.hdf5')
+            pmcc_hdf5_fname = os.path.join(matched_pmcc_hdf5_dir, "{0}_{1}_match_pmcc.hdf5".format(fname1_prefix, fname2_prefix))
             if not os.path.exists(pmcc_hdf5_fname):
                 print "Converting PMCC to hdf5 of layers: {0} and {1}".format(i, i + j)
                 dependencies = [ ]
