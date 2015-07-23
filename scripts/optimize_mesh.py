@@ -33,13 +33,13 @@ class MeshParser(object):
         # seed rowcolidx to match mesh_pts array
         self._rowcolidx = {}
         for idx, pt in enumerate(self.pts):
-            self._rowcolidx[int(pt[0] * multiplier), int(pt[1] * multiplier)] = idx
+            self._rowcolidx[int(round(pt[0].astype(np.float32), 2) * multiplier), int(round(pt[1].astype(np.float32), 2) * multiplier)] = idx
 
         # for neighbor searching and internal mesh
         self.triangulation = Delaunay(self.pts)
 
     def rowcolidx(self, xy):
-        return self._rowcolidx[int(xy[0] * self.multiplier), int(xy[1] * self.multiplier)]
+        return self._rowcolidx[int(round(xy[0], 2) * self.multiplier), int(round(xy[1], 2) * self.multiplier)]
 
     def query_internal(self):
         simplices = self.triangulation.simplices
