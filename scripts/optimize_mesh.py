@@ -221,7 +221,7 @@ def optimize_meshes(mesh_file, matches_files, tsfile_to_layerid, conf_dict={}):
 
     # pbar = ProgressBar(widgets=[Bar(), ETA()])
 
-    for block_lo in (range(0, max(1, num_meshes - block_size + 1), block_step)):
+    for block_lo in (range(0, max(1, num_meshes), block_step)):
         print
         block_hi = min(block_lo + block_size, num_meshes)
 
