@@ -237,7 +237,7 @@ if __name__ == '__main__':
 
         tiles_fname_prefix = os.path.splitext(tiles_fname)[0]
         layer_output_dir = os.path.join(args.output_dir, "{0:0>4}_{1}".format(layer, tiles_fname_prefix))
-        layer_output_pattern = "{0}%rowcol".format(tiles_fname_prefix)
+        layer_output_pattern = "{0:0>4}_{1}%rowcol".format(layer, tiles_fname_prefix)
         render_out_file = os.path.join(layer_output_dir,
                                         "{}.{}".format(layer_output_pattern.replace("%rowcol", "_tr1-tc1_"), args.output_type))
 
