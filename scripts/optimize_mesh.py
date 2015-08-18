@@ -9,6 +9,7 @@ import cPickle
 from progressbar import ProgressBar, ETA, Bar, Counter
 import h5py
 from scipy.spatial import Delaunay
+import math
 
 import pyximport
 pyximport.install()
@@ -33,13 +34,28 @@ class MeshParser(object):
         # seed rowcolidx to match mesh_pts array
         self._rowcolidx = {}
         for idx, pt in enumerate(self.pts):
-            self._rowcolidx[int(round(pt[0].astype(np.float32), 2) * multiplier), int(round(pt[1].astype(np.float32), 2) * multiplier)] = idx
+            self._rowcolidx[int(round(pt[0].astype(np.float32) * multiplier, 2)), int(round(pt[1].astype(np.float32) * multiplier, 2))] = idx
 
         # for neighbor searching and internal mesh
         self.triangulation = Delaunay(self.pts)
 
     def rowcolidx(self, xy):
-        return self._rowcolidx[int(round(xy[0], 2) * self.multiplier), int(round(xy[1], 2) * self.multiplier)]
+        try:
+            ret = self._rowcolidx[int(round(xy[0] * self.multiplier, 2)), int(round(xy[1] * self.multiplier, 2))]
+        except:
+            print("Error while trying to find xy: {} in _rowcolidx (searching for key: {})".format(xy, [int(round(xy[0] * self.multiplier, 2)), int(round(xy[1] * self.multiplier, 2))]))
+            #print("_rowcolidx.keys(): {}".format(self._rowcolidx))
+            best_dist = np.inf
+            best_key = None
+            actual_xy = [int(round(xy[0] * self.multiplier, 2)), int(round(xy[1] * self.multiplier, 2))]
+            for xy_key in self._rowcolidx.keys():
+                cur_dist = (xy_key[0] - actual_xy[0]) ** 2 + (xy_key[1] - actual_xy[1]) ** 2
+                if cur_dist < best_dist:
+                    best_dist = cur_dist
+                    best_key = xy_key
+            print("Returning value of key {} instead.".format(best_key))
+            ret = self._rowcolidx[best_key]
+        return ret
 
     def query_internal(self):
         simplices = self.triangulation.simplices
@@ -60,6 +76,10 @@ class MeshParser(object):
         p = points.copy()
         p[p < 0] = 0.01
         simplex_indices = self.triangulation.find_simplex(p)
+        if np.any(simplex_indices == -1):
+            locs = np.where(simplex_indices == -1)
+            print locs
+            print points[locs]
         assert not np.any(simplex_indices == -1)
         
         # http://codereview.stackexchange.com/questions/41024/faster-computation-of-barycentric-coordinates-for-many-points
@@ -73,6 +93,7 @@ def load_matches_hdf5(matches_files, mesh, tsfile_to_layerid):
     pbar = ProgressBar(widgets=['Loading matches: ', Counter(), ' / ', str(len(matches_files)), " ", Bar(), ETA()])
 
     for midx, mf in enumerate(pbar(matches_files)):
+        print mf
         with h5py.File(mf, 'r') as m:
             for idx in range(2):
                 # if not m['shouldConnect']:
