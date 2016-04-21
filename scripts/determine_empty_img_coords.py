@@ -12,13 +12,12 @@ def determineempty(fname, thresh):
 
     gradientimg = np.gradient(np.array(claheimg, dtype='float32'))
     vargrad = np.var(gradientimg)
-    print(vargrad)
+    print(fname + " " + str(vargrad))
     return vargrad > thresh
     # if vargrad > thresh, then the image is empty
 
 
 def main():
-    print(sys.argv)
     # Command line parser
     parser = argparse.ArgumentParser(description='Given an image, determine if it is empty or has data based on a threshold.')
     parser.add_argument('coordfilename', metavar='coordfilename', type=str,
@@ -35,8 +34,6 @@ def main():
         imgname = imgname[0:6] + "/" + imgname[7:]
         dirn = "/n/lichtmanfs2/Susan/SCS_2015-11-23_R1_W06_mSEM/scs_20151217_19-45-07/080_S80R1/" # os.path.dirname(os.path.abspath(coordfile.name))
         isempty = determineempty(dirn + imgname, args.threshold)
-        if isempty:
-            print(imgname + " is empty")
 
 if __name__ == '__main__':
     main()
