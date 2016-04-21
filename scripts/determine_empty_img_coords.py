@@ -24,8 +24,8 @@ def main():
     parser.add_argument('coordfilename', metavar='coordfilename', type=str,
                         help='the full image coordinates filename')
     parser.add_argument('-t', '--threshold', type=float,
-                        help='Empty/Data Threshold (default: 1800)',
-                        default=1800)
+                        help='Empty/Data Threshold (default: 2000)',
+                        default=2000)
 
     args = parser.parse_args()
     

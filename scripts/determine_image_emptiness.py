@@ -22,8 +22,8 @@ def main():
     parser.add_argument('imgname', metavar='imgname', type=str,
                         help='the image filename')
     parser.add_argument('-t', '--threshold', type=float,
-                        help='Empty/Data Threshold (default: 1800)',
-                        default=1800)
+                        help='Empty/Data Threshold (default: 2000)',
+                        default=2000)
 
     args = parser.parse_args()
 
