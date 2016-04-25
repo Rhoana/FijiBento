@@ -1,0 +1,83 @@
+Tile specification (tilespec for short)
+
+tilespec data format is based on the data model described at
+https://github.com/saalfeldlab/render/blob/master/docs/src/site/markdown/data-model.md
+
+Tilespec files.
+There is one file for each section of each wafer.
+The files use JavaScript Object Notation (json) 
+
+The current naming convention for the files is
+    <wafer>_Sec<sss>.json
+where
+    <sss> is the number of the section (or layer) within the wafer. 
+        The number is padded with zeros to three digits. 
+    <wafer> is the name of the directory for the wafer. It typically
+        has the form 
+    W<nn> 
+    where <nn> is the wafer number zero padded to two digits if necessary.
+
+For example, the tilespecs for Section 23 of Wafer 4 are in a file 
+called W04_Sec023.json
+
+The tilespec .json files are read into Python using json.load() 
+The information is read into a list of dictionaries. Each dictionary has 
+the form:
+(Comments added. They are not part of the file)
+{ # coordinates and sizes are in pixels
+    "bbox": [  # Bounding box for the field of view (FoV) or tile
+        15655.78599999845,  # left
+        19003.78599999845,  # right
+        11047.770000000019, # bottom
+        14023.770000000019  # top
+    ],
+    "height": 2976, # Should equal bbox[3]-bbox[2] = top - bottom
+    "layer": 200, # ROI or Section No. in mSEM parlance
+    "maxIntensity": 255.0, 
+    "mfov": 1,  # ID number of the mFoV within the section
+    "minIntensity": 0.0,
+    "mipmapLevels": { # ?
+        "0": { # Note that the key is a string. 
+            "imageUrl": "file:///n/lichtmanfs2/Alyssa/CD1_P5/W03/200/000001/200_000001_001_2015-03-16T2002226809684.bmp"
+        }
+    },
+    "tile_index": 1, # FoV number within the multi-FoV (mFoV)
+    "transforms": [ # see description below
+        {
+            "className": "mpicbg.trakem2.transform.TranslationModel2D",
+            "dataString": "15655.786 11047.77"
+        }
+    ],
+    "width": 3348   # Should equal bbox[1] - bbox[0] = right - left
+},
+
+TRANSFORMS:
+The last part of the transforms->className (TranslationModel2D in the 
+example above) gives the type of transformation. The dataString that 
+follows depends on the transformation:
+        Model                   dataString
+    TranslationModel2D      Two numbers: Dx, Dy (shifts in horizontal 
+                                and vertical axes, respectivelly)
+
+    RigidModel2D            Three numbers: Rotation angle (degrees), 
+                                Dx, Dy (translation as above)
+
+    AffineModel2D           Six numbers that make a 2x3 matrix. The first
+                            three numbes are the top row, the last three,
+                            the bottom row. The last column contains Dx and
+                            Dy, the translation in each direction. The 
+                            leading 2x2 part of the 2x3 matricx is the 
+                            rest of the affine transformation (shear, 
+                            scaling, rotation, ...)
+                            For example, the dataString "1 2 3 4 5 6" is
+                            the matrix
+                                [1 2 3;
+                                 4 5 6]
+
+    There is at least one other model:
+    Restricted Least squares 
+                            Restricted Least Squares dataString description
+                            is a coming attraction.
+
+NOTE The dataString, as the name implies, is a string, not a numeric
+array or list.
