@@ -1,0 +1,145 @@
+Output from 2d_align_affine_cluster_driver.py
+
+# From 2d_align_affine_cluster_driver.py --help:
+# Aligns (2d-elastic montaging) a given set of multibeam images using 
+#   the SLURM cluster commands.
+# 
+# positional arguments:
+#   tiles_dir             a directory that contains tile_spec files in json
+#                         format
+# 
+# 
+# optional arguments:
+#   -h, --help          show this help message and exit
+#   -w WORKSPACE_DIR, --workspace_dir WORKSPACE_DIR
+#                       a directory where the output files of the different
+#                       stages will be kept (default: ./temp)
+#   -o OUTPUT_DIR, --output_dir OUTPUT_DIR
+#                       the directory where the output to be rendered 
+#                       in json format files will be stored 
+#                       (default: ./output)
+#   -c CONF_FILE_NAME, --conf_file_name CONF_FILE_NAME
+#                       the configuration file with the parameters for 
+#                       each step of the alignment process in json 
+#                       format (uses default parameters, if not 
+#                       supplied)
+#   -s SKIP_LAYERS, --skip_layers SKIP_LAYERS
+#                         the range of layers (sections) that will not be
+#                         processed e.g., "2,3,9-11,18" (default: no skipped
+#                         sections)
+#   -k, --keeprunning   Run all jobs and report cluster jobs execution 
+#                       stats
+#   -m, --multicore     Run all jobs in blocks on multiple cores
+#   -mk, --multicore_keeprunning
+#                       Run all jobs in blocks on multiple cores and report
+#                       cluster jobs execution stats
+
+In directory <WORKSPACE_DIR>/matched_sifts 
+there are drectories for each section of the wafer. The naming 
+convention is 
+    <WAFER>_Sec<sss> 
+where 
+    <WAFER> is the name of the directory with the wafer images.
+        Includes only the directory, not the full path.
+        E.g. W03
+    <sss> Three-digit section (or layer) number.
+
+Each <WAFER>_Sec<sss> directory has 2 subdirectories: inter and intra
+
+Directory intra:
+*   Contains matched sifts between the FoVs of an mFoV. 
+*   Has one directory for each mFoV of the section.
+*   The name of the directory is the number of the mFoV w/o any
+    zero padding.
+Within the directory the naming convention is:
+    <WAFER>_Sec<sss>_sift_matches_<file_1>_<file_2>.json
+Where <WAFER> and <sss> are as defined above. 
+    <file_1> and <file_2> are the full names (w/o extension) of the 
+    files with the FoVs whose matching sifts are in the file (including
+    section and mFoV number although they are redundant)
+    
+The json file can be read as a Python list. The lists I've seen
+thus far have a single element. This element is a Python dictionary 
+with (currently) only one key:
+    correspondencePointPairs
+The value for this key is a Python list. Each element in this list
+is a Python dict with three entries: 'dist_after_ransac', 'p1', and
+'p2' as shown below. 
+The corresponding values are:
+for dist_after_ransac a floating point number
+for p1 and p2 a Python dict. with keys 'l' and 'w'. The values
+for these are a list with two floating point coordinates. 'l' refers
+to 'local' coordinates within the FoV, 'w' to 'world' coordinates. 
+NOTE: The transform data from the tilespec .json files apply to 
+    the local coordinates, not the world coordinates.
+(I think they are coordinates in the wafer holder or the microscope
+stage. They could also be coordinates within the mFoV) 
+NB: The comments are not in the json file. I added them as explanation
+{ # First pair of matched points
+    "dist_after_ransac": 91.485423737781119,
+    "p1": { # point in the file whose name appears first 
+        "l": [ # local coordinates (within the FoV or tile)
+            3276.8046875,
+            2170.1953125
+        ],
+        "w": [ # 'world' coordinates (within the mFoV)
+            23711.6506875,
+            10447.9333125
+        ]
+    },
+    "p2": { # corresponding point in the file whose name appears 2nd (or last)
+        "l": [  # local coordinates (within the FoV or tile)
+            170.17684936523438,
+            247.6089630126953
+        ],
+        "w": [  # 'world' coordinates (within the mFoV)
+            23800.455849365233,
+            8516.814963012695
+        ]
+    }
+},
+{   # second pair of matched points
+    "dist_after_ransac": 75.893006193274886,
+    "p1": {
+        "l": [
+            3146.224365234375,
+            2232.860595703125
+        ],
+        "w": [
+            23581.070365234376,
+            10510.598595703124
+        ]
+    },
+    "p2": {
+        "l": [
+            188.2891387939453,
+            258.28826904296875
+        ],
+        "w": [
+            23818.568138793944,
+            8527.494269042969
+        ]
+    }
+},
+{ # etc 
+},
+File
+    list
+        dictionary (only key: correspondencePointPairs)
+            list (one entry per pair of matched points)
+                dict:
+                    'dist_after_ransac', 'p1', and 'p2' keys
+                    p1 and p2: dicts:
+                        'l' and 'w' keys (local and world coords)
+                            list: coordinates
+
+inter:
+    Contains sift features matched between mFoVs of the ROI
+within the directory, the naming convention is the same as in 
+the 'intra' directories, namely:
+    <WAFER>_Sec<sss>_sift_matches_<file_1>_<file_2>.json
+Within the json file, the format is the same as in the 'intra' 
+directory.
+    
+ 
+     
